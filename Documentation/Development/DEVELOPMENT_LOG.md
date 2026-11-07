@@ -38,3 +38,10 @@ Entry template:
 - Test results: n/a.
 - Decisions recorded from user: git DEFERRED; Force Text and Visible Meta Files APPROVED; build index 0 = Desert.
 - Stopped at Stage A: waiting for backup confirmation and user applying Force Text.
+
+## 2026-11-07 — M0 — Git repository setup
+- Files modified: created `Documentation/Development/GIT_WORKFLOW.md`, `.gitignore` (remote template + additions); updated `CLAUDE.md` (§C VCS row, §K, new §N), `KNOWN_ISSUES.md` (KI-002), `Milestones/M0_PROJECT_STABILIZATION.md`, `MILESTONE_STATUS.md`, `NEXT_SESSION.md`. No Unity assets, scripts, scenes, prefabs, settings or packages modified. `PROJECT_AUDIT.md` untouched.
+- Summary: local folder was not a repo. Remote `main` held GitHub's `0d9ef83` (.gitignore + README), not empty. Initialized locally, fetched, built `dev` on `0d9ef83`, committed baseline `784095d` (1047 files; audited: no generated folders, 0 missing `.meta`), created `xyz-backup` from it, pushed `dev` and `xyz-backup`. `main` left at `0d9ef83`.
+- Incident: first push ran before the commit succeeded (PowerShell here-string misuse with `git commit -F -`), so `dev`/`xyz-backup` were briefly pushed at `0d9ef83`; corrected by a fast-forward push to `784095d`. No history rewritten, no force-push. Baseline subject carries an invisible BOM (cosmetic, left as is).
+- Tests executed: none for Unity (no compile/build/run). Git state verified with `git ls-remote --heads origin`.
+- Decisions: Git workflow and branch model approved by owner (recorded in `GIT_WORKFLOW.md`); `main` intentionally kept at remote initial commit so the project reaches it only via PR. Git LFS still PENDING.

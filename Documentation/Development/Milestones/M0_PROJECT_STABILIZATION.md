@@ -15,11 +15,11 @@ In: items below. Out: gameplay changes, folder migration, package changes (unles
 Owner approvals for git init and Force Text. Unity 6000.3.6f1 installed. Android Build Support (SDK/NDK/JDK) — availability UNKNOWN.
 
 ## 5. Tasks
-- [ ] `[Approval]` Create Unity `.gitignore` (exclude `Library/ Temp/ Logs/ UserSettings/ obj/ Build*/ *.csproj *.sln *.slnx .vs/ .vscode/ (optional)` ; keep `Packages/manifest.json`, `packages-lock.json`, `ProjectSettings/`).
+- [x] `[Approval]` Create Unity `.gitignore` — DONE 2026-11-07 (GitHub Unity template from remote + `.vscode/ .idea/` OS junk keystores). Original spec: (exclude `Library/ Temp/ Logs/ UserSettings/ obj/ Build*/ *.csproj *.sln *.slnx .vs/ .vscode/ (optional)` ; keep `Packages/manifest.json`, `packages-lock.json`, `ProjectSettings/`).
 - [ ] `[Approval]` Decide: Git LFS for large binaries (fbx/exr/wav/png)? (PENDING)
 - [ ] `[Editor]` Project Settings ▸ Editor: Asset Serialization = **Force Text**; Version Control = **Visible Meta Files**.
 - [ ] `[Editor][Approval]` Reserialize all assets (Assets ▸ Reimport All / Force Reserialize). Verify scenes/prefabs now start with `%YAML`.
-- [ ] `[Approval]` `git init`; first baseline commit **only after** owner permission.
+- [x] `[Approval]` `git init`; first baseline commit — DONE 2026-11-07, owner-approved; baseline `784095d` on `dev`/`xyz-backup` (pushed, verified via `git ls-remote`). Binary assets committed as-is; Force Text reserialize will be a separate large commit.
 - [ ] `[Editor]` Fix Build Settings: add `Demo_Game_Jungle/Desert/Moon` scenes; choose index 0 (decision logged in ADR-011 / log).
 - [ ] `[Editor]` Open each of the 3 scenes: record Console errors/warnings and any Missing references (do not fix unrelated ones; file issues).
 - [ ] `[Editor]` Verify Project Settings ▸ Input System Package ▸ Project-wide Actions = `Tank_Actions`; if not, assign and save (KI-006) — explain impact.

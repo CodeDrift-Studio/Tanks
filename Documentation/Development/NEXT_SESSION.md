@@ -39,5 +39,11 @@ See `KNOWN_ISSUES.md` (KI-001…KI-011, KI-P01…KI-P07).
 ## Recommended next step
 Ask the owner for M0 approvals, then execute M0 tasks in order: (1) `.gitignore` + git init, (2) Force Text + Visible Meta Files + reserialize (in Editor), (3) fix Build Settings, (4) open all scenes & log console results, (5) Windows dev build, (6) Android dev build. Log everything in `DEVELOPMENT_LOG.md`.
 
+## Git update (2026-11-07)
+Git is now set up (supersedes "Not a git repo" / "git DEFERRED" above and below). Work on **`dev`**. `main` = `0d9ef83` (GitHub initial commit, intentionally untouched); `dev` = `xyz-backup` = `784095d` (project baseline, binary assets). Policy: `CLAUDE.md` §N, `GIT_WORKFLOW.md`. Start each session with `git status --short --branch`.
+- The docs/policy commit made on top of the baseline is local until the owner authorizes a push.
+- Force Text reserialize (still pending) must be its own commit on `fix/force-text`, after the owner's independent backup is confirmed.
+- Open: Git LFS decision; fresh-clone test (B-05); first `dev` → `main` PR only after M0 acceptance + owner approval.
+
 ## M0 update (2026-11-06)
 Exact next action: user confirms an independent backup (copy of the project folder outside it), saves all open scenes, sets Edit ▸ Project Settings ▸ Editor ▸ Asset Serialization = Force Text (Visible Meta Files is already set), then sets Build Settings order Desert(0)/Jungle(1)/Moon(2). Then Claude re-verifies via read-only Editor query and file headers (`%YAML`), checks for GUID/meta changes, and continues with Stage F. Git remains DEFERRED. Code fixes (power-up reset, input null guards) need explicit approval.

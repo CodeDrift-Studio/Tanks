@@ -17,10 +17,9 @@ Evidence classes: **CONFIRMED (static)** = directly observed in files; **POTENTI
 - Validation: Windows + Android dev builds reach menu; finish a match → restarts correctly.
 
 ### KI-002 — No version control
-- Severity: High · P0 · OPEN · System: Process
-- Evidence: `git status` → not a repository; no `.gitignore`.
-- Fix: with owner approval, `git init`, Unity `.gitignore`, baseline commit (M0).
-- Validation: `git status` clean of `Library/Temp/Logs/UserSettings`.
+- Severity: High · P0 · FIXED (2026-11-07) · System: Process
+- Evidence (original): `git status` → not a repository; no `.gitignore`.
+- Resolution: repo initialized on top of remote `0d9ef83`; baseline commit `784095d` on `dev` and `xyz-backup`; remote heads verified with `git ls-remote --heads origin`; staged set checked for generated folders and missing `.meta` (0). See `GIT_WORKFLOW.md` §2. **Not yet verified**: fresh-clone open in Unity (TESTING_CHECKLIST B-05). Baseline contains binary assets (KI-003).
 
 ### KI-003 — Assets serialized as binary
 - Severity: High · P0 · OPEN · System: Asset pipeline

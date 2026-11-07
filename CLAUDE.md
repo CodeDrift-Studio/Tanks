@@ -42,7 +42,7 @@ Never silently expand scope. Optional ideas go to `MILESTONE_ROADMAP.md` as OPTI
 | AI | AI Navigation 2.0.9, baked NavMesh assets in `Tutorial_Demo/Demo_Scenes/Demo_Scene_Data/Demo_NavMeshes` | `TankAI.cs` |
 | Other packages present | Timeline, Visual Scripting, Test Framework 1.6.0, Multiplayer Center, `com.unity.ai.assistant` **2.21.0-pre.2 (pre-release)**, `com.unity.ai.inference` | `manifest.json` |
 | Tests | none (no test assemblies, no `.asmdef`) | repo |
-| VCS | **none** (not a git repo as of 2026-11-06) | `git status` |
+| VCS | Git, initialized 2026-11-07; remote `https://github.com/CodeDrift-Studio/Tanks.git`; branches `main`/`dev`/`xyz-backup` — see §N | `git` |
 | Scripting backend (Android) | IL2CPP (`1`), min SDK 25, target SDK 0 (auto), architectures flag `6` (meaning UNVERIFIED) | `ProjectSettings.asset` |
 | Identity | company `DefaultCompany`, product `Tanks`, bundle id `com.Company.ProductName` (placeholders) | `ProjectSettings.asset` |
 
@@ -178,7 +178,7 @@ Rules: never write PASS without execution evidence (date, build/commit, who/what
 - Never claim a test passed if it was not executed; never claim it compiles/builds/runs unless verified.
 - Never invent missing project functionality or history; never fabricate log entries.
 - Never silently expand MVP scope.
-- Never commit, push, or publish without explicit permission. Never initialize git without being asked (M0 task; ask first).
+- Never commit, push, or publish without explicit permission (the one-time repository setup of 2026-11-07 was explicitly approved; see §N). Follow §N for all Git work.
 - Never write secrets (keystores, passwords, tokens) into the repo or docs.
 - Licensing: never assume sample content is freely redistributable commercially; record provenance; unresolved licensing = release blocker (M7, KI-007). Make no legal conclusions.
 - **Approval required before**: major refactors, asset deletion, folder restructuring, package/Unity changes, project-wide settings, new architectural dependencies, scope expansion, changes with asset-compatibility risk.
@@ -207,3 +207,18 @@ Files live in `Documentation/Development/`. After any meaningful task update, as
 **Quality gates** — a milestone is COMPLETED only if: all mandatory tasks done; acceptance criteria met; relevant tests executed or explicitly marked unavailable-with-owner-sign-off; no unresolved critical blocker; docs updated; changes reviewable. Tasks needing the Editor or a device → **REVIEW REQUIRED**.
 
 **Active milestone**: see `MILESTONE_STATUS.md` (initially **M0 — Project Stabilization**, NOT STARTED).
+
+---
+
+## N. Git Policy (owner-approved 2026-11-07)
+
+Full detail: `Documentation/Development/GIT_WORKFLOW.md`. Remote: `https://github.com/CodeDrift-Studio/Tanks.git`.
+
+- **`main`** — stable/release. Never develop on it. Only receives `dev` via reviewed pull request, after full-diff review, validation evidence and owner approval. Never merge `dev` into `main` automatically.
+- **`dev`** — active development; **default working branch** (M0 onward). Verify the branch before any change. Logical, reviewable commits; don't mix unrelated changes.
+- **`xyz-backup`** — archive of removed/deferred material only. Never develop on it; never merge it into `dev`/`main`; not a full backup. Before archiving: record original path, reason, date; verify dependencies/GUIDs/scene/prefab refs (text search is not proof of "unused"); verify it's on the branch; only then remove from `dev` (with approval).
+- Feature work: `feature/*`, `fix/*`, `experiment/*` from `dev`, merged back into `dev` after review. No other long-lived branches without approval.
+- **Never**: force-push, reset/rewrite published history, `--allow-unrelated-histories` (without approval), discard uncommitted user work, switch branches with uncommitted changes unprotected, commit `Library/ Temp/ Obj/ Logs/ UserSettings/ Build*/`, delete `.meta` files, commit secrets/keystores.
+- **Commit/push only when authorized** for the session. Commit messages end with the Claude co-author trailer; on PowerShell use `git commit -F <file>`.
+- **Session start**: `git status --short --branch`; confirm branch/tree; fetch if appropriate; confirm task and milestone. **Session end**: review diff, check for stray files, validate, update docs, summarize, commit/push only if authorized.
+- Claiming a branch exists remotely requires `git ls-remote --heads origin` evidence.

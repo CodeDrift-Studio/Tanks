@@ -8,7 +8,7 @@ Last updated: 2026-11-06 (documentation created; no development work performed).
 
 | ID | Milestone | Status | Completion | Tasks done | Tasks pending | Blockers | Current focus | Next action |
 |---|---|---|---|---|---|---|---|---|
-| M0 | Project Stabilization | IN PROGRESS | baseline + investigations done; config changes pending | baseline, env assessment, static input/power-up/scene-load investigation | backup confirm, Force Text, Build Settings order, builds | REQUIRES USER ACTION: backup + Editor settings; git DEFERRED | Stage A | User: confirm backup, apply Force Text (see M0_BASELINE.md / session message) |
+| M0 | Project Stabilization | IN PROGRESS | baseline + investigations done; config changes pending | baseline, env assessment, static input/power-up/scene-load investigation | backup confirm, Force Text, Build Settings order, builds | REQUIRES USER ACTION: backup + Editor settings; git DONE (2026-11-07, `dev` baseline `784095d`) | Stage A | User: confirm backup, apply Force Text (see M0_BASELINE.md / session message) |
 | M1 | Gameplay Validation | NOT STARTED | 0 | none | all | Needs M0 | — | — |
 | M2 | Platform Input & Compatibility | NOT STARTED | 0 | none | all | Needs M0; physical Android device (UNKNOWN) | — | — |
 | M3 | Game Foundation | NOT STARTED | 0 | none | all | Needs M0–M2; name/namespace/migration decisions | — | — |
@@ -18,10 +18,12 @@ Last updated: 2026-11-06 (documentation created; no development work performed).
 | M7 | Commercial Release | NOT STARTED | 0 | none | all | Needs M6; name, pricing, business model, licensing | — | — |
 
 ## Cross-cutting pending approvals
-- Initialize git and add a Unity `.gitignore` (M0).
+- ~~Initialize git and add a Unity `.gitignore` (M0).~~ DONE 2026-11-07 — see `GIT_WORKFLOW.md`.
+- Git LFS decision (M0, PENDING).
 - Force Text serialization (re-saves all binary scenes/prefabs) (M0).
 - Which scene is build index 0 (M0).
 - Folder migration target (M3, ADR-004).
 
 ## Status change log
 - 2026-11-06: M0 NOT STARTED → IN PROGRESS (baseline written; awaiting user Editor actions).
+- 2026-11-07: M0 remains IN PROGRESS; git repository set up (branches `main`/`dev`/`xyz-backup`), no status change.
