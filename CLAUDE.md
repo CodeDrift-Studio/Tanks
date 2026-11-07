@@ -1,0 +1,209 @@
+# CLAUDE.md — Tanks! (Enhanced Tanks Arena)
+
+Primary instruction file for every Claude Code session in this repository. Read it first. Then follow **§J (workflow)** and **§M (session procedure)**.
+
+Evidence labels used everywhere: **VERIFIED** (checked by running/inspecting in this session), **STATIC** (read from files, not run), **UNVERIFIED**, **UNKNOWN**, **PENDING DECISION**.
+Baseline facts were gathered on 2026-11-06 by static inspection only. **Nothing has been compiled, built or run by Claude.** Do not claim otherwise unless you actually do it.
+
+---
+
+## A. Project Overview
+
+- **Game**: Tanks! — "Enhanced Tanks Arena". 3D arcade tank arena combat, short round-based matches, 2–4 combatants (humans and/or CPU bots).
+- **Origin**: Unity's "Tanks!" sample/tutorial project (Asset Store *Tanks! 3D Sample Project*; Unity Learn course "Tanks! – Make a battle game for web and mobile"). `Assets/_Tanks/Documentation.txt` confirms this. The existing code is the **foundation**, not the final product. Goal: an original, standalone, commercial game.
+- **Engine**: Unity 6.3 (`6000.3.6f1`), URP 17.3.0, C#. Input System 1.18.0 (Input System only; `activeInputHandler: 1`).
+- **Platforms**: Windows PC and Android. WebGL is *not* a target (a leftover WebGL branch exists in `PauseMenu`; ignore).
+- **Multiplayer**: local only. No online multiplayer in the MVP.
+- **Distribution/business model/final name/pricing**: commercial, otherwise **PENDING DECISION**.
+- **Audit**: `PROJECT_AUDIT.md` (static, 2026-11-06). If the repo and the audit disagree, **the repo wins** — then record the discrepancy in `Documentation/Development/KNOWN_ISSUES.md`.
+
+## B. Product Vision and Scope
+
+Direction: **Enhanced Tanks Arena** — keep the accessible arcade combat, add original branding, better presentation, polish, and original content.
+
+Pillars: (1) accessible combat, (2) competitive arena battles, (3) different arenas and power-ups, (4) replayable short matches, (5) local multiplayer and AI competition.
+
+**MVP (required)**: 2–4 combatants; human + CPU; local PC multiplayer; Android single-player vs AI first; three arenas (Desert, Jungle, Moon); movement/shooting; health/damage/elimination; round-based match; the existing six power-ups; camera framing; main menu + match setup; gameplay HUD; round and match results; pause + settings; Android touch controls; PC keyboard + gamepad; Windows and Android builds.
+
+**Not assumed**: Android shared-screen multiplayer. (Current code hides the P2 button on mobile — consistent with single-human Android — `StartMenuSlot.Awake`.)
+
+**Out of MVP (do not build unless the owner expands scope in writing)**: online multiplayer, ranked matchmaking, accounts, cloud saves, battle pass, IAP, complex progression, extensive tank customization, more than three arenas.
+
+Never silently expand scope. Optional ideas go to `MILESTONE_ROADMAP.md` as OPTIONAL, not into code.
+
+## C. Technical Stack (discovered)
+
+| Area | Fact | Source |
+|---|---|---|
+| Unity | 6000.3.6f1 | `ProjectSettings/ProjectVersion.txt` |
+| Render | URP 17.3.0; `Assets/Settings/{PC,Mobile}_{Renderer,RPAsset}`; a second set in `Assets/_Tanks/Settings/Profiles` (`UniversalRenderPipelineAsset*`) | files |
+| Input | Input System 1.18.0; action asset `Assets/_Tanks/Settings/Tank_Actions.inputactions`; template asset `Assets/InputSystem_Actions.inputactions` (unused by game code) | `manifest.json` |
+| UI | uGUI 2.0.0 + TextMeshPro (resources under `Assets/_Tanks/Settings/TextMesh Pro`) | scripts |
+| AI | AI Navigation 2.0.9, baked NavMesh assets in `Tutorial_Demo/Demo_Scenes/Demo_Scene_Data/Demo_NavMeshes` | `TankAI.cs` |
+| Other packages present | Timeline, Visual Scripting, Test Framework 1.6.0, Multiplayer Center, `com.unity.ai.assistant` **2.21.0-pre.2 (pre-release)**, `com.unity.ai.inference` | `manifest.json` |
+| Tests | none (no test assemblies, no `.asmdef`) | repo |
+| VCS | **none** (not a git repo as of 2026-11-06) | `git status` |
+| Scripting backend (Android) | IL2CPP (`1`), min SDK 25, target SDK 0 (auto), architectures flag `6` (meaning UNVERIFIED) | `ProjectSettings.asset` |
+| Identity | company `DefaultCompany`, product `Tanks`, bundle id `com.Company.ProductName` (placeholders) | `ProjectSettings.asset` |
+
+Do not invent services, SDKs, backends or packages. None exist besides the above.
+
+## D. Existing Architecture (STATIC)
+
+Namespace `Tanks.Complete`. 23 scripts in `Assets/_Tanks/Scripts`.
+
+- **GameManager** (`Managers/`) — owns `GameState {MainMenu, Game}`; `StartGame(PlayerData[])` called by the menu; spawns tanks at `TankManager.m_SpawnPoint`; sets `CameraControl.m_Targets`; runs the `GameLoop` coroutine (RoundStarting → RoundPlaying → RoundEnding); first to `m_NumRoundsToWin` (default 5) wins; on game win calls `SceneManager.LoadScene(0)`. Holds 4 tank prefab refs (menu slots) and `TankManager[] m_SpawnPoints`.
+- **TankManager** — `[Serializable]` plain class (not a MonoBehaviour) wrapping one tank: caches movement/shooting/AI/canvas, applies player colour by matching material names containing `"TankColor"`, enables/disables control, `Reset()` repositions and toggles `SetActive` false→true. Has an editor-only `PropertyDrawer`.
+- **TankMovement** — Rigidbody velocity/`MoveRotation` in `FixedUpdate`; tank-style control or direct (camera-relative) control when scheme is `"Gamepad"` or `m_IsDirectControl`; explosion knockback (`AddExplosionForce`); engine audio. `[DefaultExecutionOrder(-10)]`. Picks scheme in `Start`: mobile UI present & ControlIndex 1 → `Gamepad` (virtual device); else ControlIndex 1 → `KeyboardLeft`, otherwise `KeyboardRight`.
+- **TankShooting** — charge-to-fire (min/max force, max charge time, cooldown), human and AI update paths, special-shell damage multiplier, `GetProjectilePosition` ballistic estimate used by AI.
+- **TankHealth** — health, shield (damage reduction), invincibility toggle, death explosion (prefab instantiated in `Awake`), death = `SetActive(false)`.
+- **ShellExplosion** — `OverlapSphere` on `m_TankMask` ("Players" layer), distance-scaled damage, knockback, particles; self-destruct after lifetime.
+- **TankAI** — added by `TankManager` for computer tanks (also auto-added by `TankMovement.Start` in empty scenes). Seek (NavMesh path to nearest tank, repath every 0.3–0.6 s) and Flee states; drives the Rigidbody directly in `FixedUpdate`; fires via `TankShooting.StartCharging/StopCharging`.
+- **TankInputUser** — clones `InputSystem.actions` JSON per tank, associates an `InputUser`; `TankMovement`/`TankShooting` read actions `Vertical`, `Horizontal`, `Fire` from the local copy.
+- **Power-ups** — `PowerUp` (trigger pickup; types Speed, DamageReduction, ShootingBonus, Healing, Invincibility, DamageMultiplier), `PowerUpSpawner` (random type at fixed y=1.09, respawn cooldown 20 s), `Tank/PowerUpDetector` (applies effects via coroutines on the tank, gates on `m_HasActivePowerUp`), `PowerUpHUD`, `PowerUpFX`.
+- **CameraControl** — averages active tank positions, orthographic size to fit all, SmoothDamp in `FixedUpdate`.
+- **GameUIHandler** (start menu; also wires pause) + **StartMenuSlot** (4 slots, tank preview, P1/P2/CPU/Off) + **PauseMenu** (pause toggle, controls screen, "select tank" = reload active scene by build index, quit) + **MessageTextReference** (title text locator) + **MobileUIControl** / **UIVirtualJoystick** (on-screen controls; `Instance` singleton; auto-disables off-mobile).
+- **Editor-only**: `PowerUpEditor`, `MoveSceneViewCamera`, `ProjectWideActionsSetup` (auto-assigns `Tank_Actions` as project-wide actions via hard-coded GUID `7fb6c1c7…`).
+
+Relationships: Menu → `PlayerData[]` → GameManager → TankManager[] → tank components; Shell → TankHealth/TankMovement; PowerUp → PowerUpDetector → Health/Shooting/Movement/HUD; AI → TankMovement/TankShooting/NavMesh.
+
+**Scenes** (binary-serialized): `Tutorial_Demo/Demo_Scenes/Demo_Game_{Desert,Jungle,Moon}.unity` each contain GameManager, TankManager, PauseMenu, PowerUpSpawners, CameraControl. `Assets/Scenes/SampleScene.unity` is a leftover template scene.
+
+## E. Project Structure
+
+### Current (as of 2026-11-06)
+```
+Assets/
+  Scenes/SampleScene.unity               template leftover
+  Settings/                              URP template assets (PC/Mobile)
+  InputSystem_Actions.inputactions       template leftover
+  _Tanks/
+    Art/ Audio/ Prefabs/ Scripts/ Settings/
+    Tutorial_Demo/  (Demo_AudioMixers, Demo_Materials, Demo_Prefabs, Demo_Scenes[+Demo_Scene_Data])
+    Documentation.txt, Tanks!_Third-PartyNotice.txt
+Packages/  ProjectSettings/  Documentation/Development/  PROJECT_AUDIT.md  CLAUDE.md
+```
+Tank prefabs (`Demo_Tank` + ATV/Heavy/Medium/Shark variants) exist **only** under `Tutorial_Demo/Demo_Prefabs/Demo_Tanks`. `Tutorial_Demo` holds the real playable game.
+
+### Proposed target (PENDING APPROVAL — do not migrate until approved in M3)
+```
+Assets/Game/{Scripts,Prefabs,Scenes,Art,Audio,UI,Settings,Data}
+Assets/Game/Scenes/{Boot,MainMenu,Arena_Desert,Arena_Jungle,Arena_Moon}
+Assets/ThirdParty/        (provenance-tracked imports)
+Assets/Tests/{EditMode,PlayMode}
+```
+Migration must use the Unity Editor (or tooling that moves `.meta` files with assets) so GUIDs are preserved. See TECHNICAL_DECISIONS ADR-004.
+
+## F. Coding Standards
+
+Follow existing conventions unless there is a concrete reason not to:
+- **Namespace** `Tanks.Complete` for existing code. New namespace for original code is PENDING DECISION (ADR-005); until decided, keep `Tanks.Complete`.
+- **Naming**: `m_` prefix for existing serialized/instance fields (match the surrounding file); PascalCase for types, methods, properties; `k_` for constants; one MonoBehaviour per file, filename = class name.
+- **Inspector exposure**: prefer `[SerializeField] private` over `public` for **new** fields; add `[Tooltip]` and `[Header]`. Do not convert existing public fields in unrelated tasks (scene/prefab serialized data keys on field names — renaming loses data; use `[FormerlySerializedAs]` if a rename is approved).
+- **Component responsibility**: one concern per component; managers coordinate, tank components act. Don't grow `GameManager`/`TankAI` with unrelated features — extract only when the task needs it.
+- **Null safety**: validate required references in `Awake`/`Start` with a clear `Debug.LogError` naming the object; guard `FindAnyObjectByType` results; never assume `Camera.main`, `Keyboard.current`, `InputSystem.actions` are non-null on Android.
+- **Events**: prefer C# events/`UnityEvent` for new cross-system notifications; **always unsubscribe** (`OnDisable`/`OnDestroy`). Existing direct calls are acceptable; don't rewrite them casually.
+- **Coroutines**: fine for timed sequences (existing style). Remember a coroutine started on a GameObject dies when that object is deactivated (tanks are deactivated on death/reset) — any state changed by a coroutine must be restored in `OnDisable`/`OnEnable` too.
+- **Allocations**: no per-frame `new`, LINQ, string concat, or `GetComponent` in `Update/FixedUpdate`; cache. Avoid `renderer.materials` in loops (instantiates) — use `sharedMaterials` or `MaterialPropertyBlock` where possible. Cache `WaitForSeconds`.
+- **Object pooling**: shells, explosions, pickup FX are currently `Instantiate/Destroy`. Introduce pooling only when profiling (M6) shows GC spikes; use Unity's `ObjectPool<T>`.
+- **Update vs FixedUpdate**: read input in `Update`; apply physics in `FixedUpdate` (existing pattern). No physics in `Update`.
+- **Input System**: use the cloned per-tank action asset (`TankInputUser`) — never `UnityEngine.Input`. Action/scheme names are string-keyed (`Vertical`, `Horizontal`, `Fire`, `Pause`, `KeyboardLeft`, `KeyboardRight`, `Gamepad`); centralize in constants if you touch them.
+- **Scene management**: scenes are loaded by build index today (`LoadScene(0)`, `GetActiveScene().buildIndex`). Don't change load strategy without an ADR; keep Build Settings valid.
+- **ScriptableObjects**: none exist today. Introduce for data config (tank stats, match settings) only in/after M3 with an ADR.
+- **Errors/logging**: `Debug.LogError` for config faults, `LogWarning` for recoverable; no log spam in per-frame paths; wrap debug logs in `#if UNITY_EDITOR || DEVELOPMENT_BUILD` if frequent.
+- **Performance**: target budgets are PENDING (M6). Do not micro-optimize before profiling.
+- **Comments**: existing code is heavily commented for learners. New code: comment *why*, not *what*.
+
+## G. Unity Development Rules
+
+- **Never hand-edit** `.unity`, `.prefab`, `.asset`, `.meta`, or `ProjectSettings/*` as text unless the files are Force-Text (**currently they are binary** — see KI-003) *and* the task explicitly requires it. Editing binary assets with text tools corrupts them. Prefer Unity Editor operations (via the user, or an available Unity MCP/Editor tool if connected — verify it works first).
+- **Scenes/prefabs**: smallest possible change; never "tidy" unrelated objects; prefer prefab overrides on variants over editing the base prefab; check all variants/scenes that use a prefab before changing it.
+- **GUIDs/.meta**: every asset has a `.meta`; never delete, regenerate, or copy one by hand. Move/rename only via Editor/AssetDatabase so references survive. Don't commit an asset without its `.meta`.
+- **Build Settings**: must list valid scenes; index 0 is what `GameManager` restarts to. Current state is broken (KI-001). Any change to the list is a project-wide change — explain impact.
+- **Packages**: no install/upgrade/remove without approval. Packages were just upgraded on 2026-11-06 (see `Logs/Packages-Update.log`); do not churn. `com.unity.ai.assistant` is pre-release — decision pending (ADR-007).
+- **Input Actions**: edit `Tank_Actions.inputactions` (JSON) only deliberately; keep action and scheme names stable or update all string users. Persisted "Project-wide Actions" assignment is empty in ProjectSettings (`preloadedAssets: []`) — see KI-006.
+- **URP**: two pipeline asset families exist; don't modify renderer features/quality tiers without a task. PC and Mobile assets differ intentionally.
+- **Android**: package name, keystore, ARM64, IL2CPP, min/target SDK are release settings — change only in M0/M7 with explanation. Never commit keystores or passwords.
+- **Windows**: Mono/IL2CPP choice, resolution/fullscreen defaults are PENDING; don't change silently.
+- **Generated folders**: `Library/`, `Temp/`, `Logs/`, `UserSettings/`, `obj/`, `*.csproj`, `*.slnx` are generated — never hand-edit, never commit.
+
+## H. Platform Requirements
+
+### Windows PC
+- Input: keyboard (P1 `WASD`+`Space`, P2 arrows+`Enter`, pause `Esc`), gamepad. **Gamepad gap (STATIC)**: the `Gamepad` scheme and bindings exist in `Tank_Actions`, but `TankMovement.Start` only activates `Gamepad` for the mobile virtual device; on desktop it activates `KeyboardLeft`/`KeyboardRight`. Physical-gamepad play therefore appears **not wired** (needs runtime confirmation → KI-010).
+- UI scaling: canvas scaler match set per aspect each frame in `GameUIHandler.Update`; test 16:9, 16:10, 21:9, 4:3.
+- Performance/graphics: PC URP asset; budgets PENDING (M6). Build: Windows x64, development build for testing.
+
+### Android
+- Input: on-screen joystick (`MobileControlCanvas.prefab`, `MobileUIControl`); single human player. **Not wired into any of the 3 scenes (STATIC string search)** — verify in Editor (KI-008).
+- UI: portrait is made readable but the game is landscape; check notches/safe area (no safe-area code exists).
+- Performance: use `Mobile_RPAsset`/`Mobile_Renderer`; budgets PENDING; test low/mid-tier device.
+- Build: IL2CPP, ARM64 required for Play Store; package name placeholder; min SDK 25 currently.
+- **Physical-device testing is required**; Editor device simulator is not sufficient.
+
+## I. Testing and QA Standards
+
+| Level | Claude can do | Needs Unity Editor / device / human |
+|---|---|---|
+| Static inspection | Read code/config, grep, cross-check refs | — |
+| Compilation | Only if Unity batch-mode or an Editor tool is available and *actually run*; otherwise state "not compiled" | Editor compile / `-batchmode -quit` |
+| EditMode tests | Write them (M0/M6); run only if the Unity CLI/MCP is available | Test Runner |
+| PlayMode tests | Same | Test Runner |
+| Manual gameplay | Provide checklists | A person plays each arena |
+| Windows build | Prepare steps | Editor build, run |
+| Android test | Prepare steps | Real device, ADB logs |
+| Regression | Maintain `TESTING_CHECKLIST.md` | Re-execute after changes |
+
+Rules: never write PASS without execution evidence (date, build/commit, who/what ran it). "Compiles" requires an actual compile result. A milestone with unexecuted device tests becomes **REVIEW REQUIRED**, not COMPLETED.
+
+## J. Development Workflow (per task)
+
+1. **Understand** the task; map it to a milestone and requirement (traceability).
+2. **Inspect** the relevant scripts/scenes/prefabs; check `KNOWN_ISSUES.md`.
+3. **Identify dependencies** (what references this? other prefabs/scenes? inspector fields?).
+4. **Plan** — state affected systems, steps, risks, validation method.
+5. **Approval** when required (§K and Rule 7); otherwise proceed.
+6. **Implement minimal changes**; one logical task at a time.
+7. **Validate** with what is actually available; record what could not be validated.
+8. **Document** — milestone file, status, log, issues, decisions, NEXT_SESSION (see §L).
+9. **Update milestone status** honestly.
+10. **Summarize** (§M end-of-session format).
+
+## K. Project Safety Rules
+
+- Never rewrite an existing system without evidence and justification; prefer extending.
+- Never refactor unrelated code during a feature task.
+- Never delete assets without explicit approval; never rename/move Unity assets casually; preserve `.meta`/GUIDs.
+- Never upgrade Unity or packages without approval; never change project-wide settings without explaining impact.
+- Never claim a test passed if it was not executed; never claim it compiles/builds/runs unless verified.
+- Never invent missing project functionality or history; never fabricate log entries.
+- Never silently expand MVP scope.
+- Never commit, push, or publish without explicit permission. Never initialize git without being asked (M0 task; ask first).
+- Never write secrets (keystores, passwords, tokens) into the repo or docs.
+- Licensing: never assume sample content is freely redistributable commercially; record provenance; unresolved licensing = release blocker (M7, KI-007). Make no legal conclusions.
+- **Approval required before**: major refactors, asset deletion, folder restructuring, package/Unity changes, project-wide settings, new architectural dependencies, scope expansion, changes with asset-compatibility risk.
+
+## L. Documentation Maintenance
+
+Files live in `Documentation/Development/`. After any meaningful task update, as relevant: the active `Milestones/Mx_*.md` (tick boxes only with evidence), `MILESTONE_STATUS.md`, `DEVELOPMENT_LOG.md` (append-only, real entries), `KNOWN_ISSUES.md`, `TECHNICAL_DECISIONS.md` (only for decisions actually made), `TESTING_CHECKLIST.md` (results with evidence), `NEXT_SESSION.md` (always at end of a meaningful session). Update `CLAUDE.md` only when persistent instructions or architectural facts change. Don't duplicate content across files — link instead.
+
+## M. Session Procedure and Milestone Execution Rules
+
+**Start of every session**: read `CLAUDE.md` → `MILESTONE_STATUS.md` → `NEXT_SESSION.md` → the active milestone file → `git status`/recent log **if** a repo exists → relevant source → pick the next incomplete task → check blockers/pending approvals.
+**Before implementing**: explain the task, affected systems, plan, risks, validation.
+**After implementing**: review the diff, run available checks, record results, update docs/status, write the handoff.
+**End-of-session summary** must list: Completed · Modified files · Validation performed · Validation NOT performed · Known issues · Pending decisions · Recommended next task.
+
+**Rules**
+1. One milestone at a time; don't drift into the next.
+2. One logical task at a time; focused, reviewable changes.
+3. Inspect before modifying (read, find references, side effects, explain).
+4. Preserve existing systems; rewrite only if the existing one cannot meet an approved requirement.
+5. Verify before completion; say explicitly when the Editor/device was unavailable.
+6. Update documentation (§L).
+7. Respect approval boundaries (§K).
+8. Traceability: milestone → requirement → files/assets → validation evidence.
+
+**Quality gates** — a milestone is COMPLETED only if: all mandatory tasks done; acceptance criteria met; relevant tests executed or explicitly marked unavailable-with-owner-sign-off; no unresolved critical blocker; docs updated; changes reviewable. Tasks needing the Editor or a device → **REVIEW REQUIRED**.
+
+**Active milestone**: see `MILESTONE_STATUS.md` (initially **M0 — Project Stabilization**, NOT STARTED).
