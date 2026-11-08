@@ -1,3 +1,5 @@
+> **SUPERSEDED 2026-11-08 — historical reference only.** This is the original Windows+Android MVP milestone from 2026-11-06. The authoritative plan is `MILESTONE_ROADMAP.md` (M0–M8, Android-first). Do not execute tasks from this file; its content is kept unchanged below for traceability.
+
 # M5 — Original Content and Differentiation
 
 **Status: NOT STARTED** · Complexity: L–XL · Tags: `[Editor]` `[Build]` `[Device]` `[Approval]`

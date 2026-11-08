@@ -9,25 +9,26 @@ Baseline facts were gathered on 2026-11-06 by static inspection only. **Nothing 
 
 ## A. Project Overview
 
-- **Game**: Tanks! — "Enhanced Tanks Arena". 3D arcade tank arena combat, short round-based matches, 2–4 combatants (humans and/or CPU bots).
+- **Scope update (owner-confirmed, recorded 2026-11-08 — overrides older text in this file and in `PROJECT_AUDIT.md`)**: first commercial release is **Android only**, **single-player vs AI**, touch controls mandatory. Windows/PC, iOS, online multiplayer and shared-screen Android multiplayer are **out of first-release scope** (code/assets stay; nothing is deleted). Business model: **Free-to-Play with Ads + IAP**. **Mandatory integrations: Google AdMob, Unity IAP / Google Play Billing, Firebase, Google Play Games Services.** The exact feature scope of each service is **PENDING** (see `Documentation/Development/DECISION_REGISTER.md` and `SERVICE_INTEGRATION_PLAN.md`); nothing is installed or configured yet. Roadmap: **M0–M8** in `Documentation/Development/MILESTONE_ROADMAP.md`. Where this file still mentions PC/Windows or "2–4 combatants", read it as the code's current capability, not release scope.
+- **Game**: Tanks! — "Enhanced Tanks Arena". 3D arcade tank arena combat, short round-based matches. The code supports 2–4 combatants (humans and/or CPU bots); the first release uses one human vs AI.
 - **Origin**: Unity's "Tanks!" sample/tutorial project (Asset Store *Tanks! 3D Sample Project*; Unity Learn course "Tanks! – Make a battle game for web and mobile"). `Assets/_Tanks/Documentation.txt` confirms this. The existing code is the **foundation**, not the final product. Goal: an original, standalone, commercial game.
 - **Engine**: Unity 6.3 (`6000.3.6f1`), URP 17.3.0, C#. Input System 1.18.0 (Input System only; `activeInputHandler: 1`).
-- **Platforms**: Windows PC and Android. WebGL is *not* a target (a leftover WebGL branch exists in `PauseMenu`; ignore).
-- **Multiplayer**: local only. No online multiplayer in the MVP.
-- **Distribution/business model/final name/pricing**: commercial, otherwise **PENDING DECISION**.
+- **Platforms**: **Android only** for the first release. Windows (Editor use only), iOS and WebGL are not release targets (a leftover WebGL branch exists in `PauseMenu`; ignore).
+- **Multiplayer**: none in the first release (no online, no shared-screen Android).
+- **Business model**: Free-to-Play, Ads + IAP (confirmed). **Final name, package ID, ad formats/placements, IAP catalog and pricing, age-group/audience, release channel: PENDING DECISION** (`DECISION_REGISTER.md`).
 - **Audit**: `PROJECT_AUDIT.md` (static, 2026-11-06). If the repo and the audit disagree, **the repo wins** — then record the discrepancy in `Documentation/Development/KNOWN_ISSUES.md`.
 
 ## B. Product Vision and Scope
 
 Direction: **Enhanced Tanks Arena** — keep the accessible arcade combat, add original branding, better presentation, polish, and original content.
 
-Pillars: (1) accessible combat, (2) competitive arena battles, (3) different arenas and power-ups, (4) replayable short matches, (5) local multiplayer and AI competition.
+Pillars: (1) accessible combat, (2) competitive arena battles, (3) power-ups and a polished arena — **Desert is the only first-release arena; Jungle and Moon are deferred to a future content update** (DR-C14), with the code kept extensible for more arenas, (4) replayable short matches, (5) AI competition (local multiplayer is a deferred option).
 
-**MVP (required)**: 2–4 combatants; human + CPU; local PC multiplayer; Android single-player vs AI first; three arenas (Desert, Jungle, Moon); movement/shooting; health/damage/elimination; round-based match; the existing six power-ups; camera framing; main menu + match setup; gameplay HUD; round and match results; pause + settings; Android touch controls; PC keyboard + gamepad; Windows and Android builds.
+**First-release scope (required)**: Android; one human vs AI; touch controls; **one arena: Desert** (owner-confirmed 2026-11-08, DR-C14; Jungle and Moon are deferred to a future content update and are not release blockers); movement/shooting; health/damage/elimination; round-based match; the existing six power-ups; camera framing; main menu and match setup (no arena selection in the first release); gameplay HUD; round and match results; pause + settings with persistence; Android lifecycle/back-button handling; Firebase, GPGS, AdMob and IAP integrations (scoped per `SERVICE_INTEGRATION_PLAN.md`); original branding and cleared content; signed AAB through Play testing tracks.
 
-**Not assumed**: Android shared-screen multiplayer. (Current code hides the P2 button on mobile — consistent with single-human Android — `StartMenuSlot.Awake`.)
+**Excluded from first release** (code stays, nothing is deleted): Windows/PC release, iOS, PC keyboard release controls, PC gamepad (KI-010), online multiplayer, shared-screen Android multiplayer, Jungle and Moon arenas (deferred, DR-C14), arena-selection UI, additional arenas beyond Desert, battle pass / live operations, any progression or monetization feature not approved in writing.
 
-**Out of MVP (do not build unless the owner expands scope in writing)**: online multiplayer, ranked matchmaking, accounts, cloud saves, battle pass, IAP, complex progression, extensive tank customization, more than three arenas.
+**Pending scope questions** (do not assume): cloud save / GPGS Saved Games, achievements and leaderboards content, exact Firebase services (Remote Config in particular), ad formats and placements, IAP products, tablet support, orientation.
 
 Never silently expand scope. Optional ideas go to `MILESTONE_ROADMAP.md` as OPTIONAL, not into code.
 
@@ -46,7 +47,7 @@ Never silently expand scope. Optional ideas go to `MILESTONE_ROADMAP.md` as OPTI
 | Scripting backend (Android) | IL2CPP (`1`), min SDK 25, target SDK 0 (auto), architectures flag `6` (meaning UNVERIFIED) | `ProjectSettings.asset` |
 | Identity | company `DefaultCompany`, product `Tanks`, bundle id `com.Company.ProductName` (placeholders) | `ProjectSettings.asset` |
 
-Do not invent services, SDKs, backends or packages. None exist besides the above.
+Do not invent services, SDKs, backends or packages. **None of the following is installed yet**; they are owner-mandated for the first release and are planned in `Documentation/Development/SERVICE_INTEGRATION_PLAN.md`: Firebase (Analytics, Crashlytics, Remote Config — scope pending), Google Play Games Services, Google AdMob, Unity IAP / Google Play Billing. Installing any of them is a package change and needs approval in the milestone that owns it (M5/M6). Do not add other services, ad networks, or SDKs.
 
 ## D. Existing Architecture (STATIC)
 
@@ -86,6 +87,7 @@ Packages/  ProjectSettings/  Documentation/Development/  PROJECT_AUDIT.md  CLAUD
 Tank prefabs (`Demo_Tank` + ATV/Heavy/Medium/Shark variants) exist **only** under `Tutorial_Demo/Demo_Prefabs/Demo_Tanks`. `Tutorial_Demo` holds the real playable game.
 
 ### Proposed target (PENDING APPROVAL — do not migrate until approved in M3)
+The `Arena_Jungle` / `Arena_Moon` entries below are a **future-arena proposal only, not a first-release commitment**; the first release ships Desert only (DR-C14).
 ```
 Assets/Game/{Scripts,Prefabs,Scenes,Art,Audio,UI,Settings,Data}
 Assets/Game/Scenes/{Boot,MainMenu,Arena_Desert,Arena_Jungle,Arena_Moon}
@@ -105,13 +107,14 @@ Follow existing conventions unless there is a concrete reason not to:
 - **Events**: prefer C# events/`UnityEvent` for new cross-system notifications; **always unsubscribe** (`OnDisable`/`OnDestroy`). Existing direct calls are acceptable; don't rewrite them casually.
 - **Coroutines**: fine for timed sequences (existing style). Remember a coroutine started on a GameObject dies when that object is deactivated (tanks are deactivated on death/reset) — any state changed by a coroutine must be restored in `OnDisable`/`OnEnable` too.
 - **Allocations**: no per-frame `new`, LINQ, string concat, or `GetComponent` in `Update/FixedUpdate`; cache. Avoid `renderer.materials` in loops (instantiates) — use `sharedMaterials` or `MaterialPropertyBlock` where possible. Cache `WaitForSeconds`.
-- **Object pooling**: shells, explosions, pickup FX are currently `Instantiate/Destroy`. Introduce pooling only when profiling (M6) shows GC spikes; use Unity's `ObjectPool<T>`.
+- **Object pooling**: shells, explosions, pickup FX are currently `Instantiate/Destroy`. Introduce pooling only when on-device profiling (M8) shows GC spikes; use Unity's `ObjectPool<T>`.
 - **Update vs FixedUpdate**: read input in `Update`; apply physics in `FixedUpdate` (existing pattern). No physics in `Update`.
 - **Input System**: use the cloned per-tank action asset (`TankInputUser`) — never `UnityEngine.Input`. Action/scheme names are string-keyed (`Vertical`, `Horizontal`, `Fire`, `Pause`, `KeyboardLeft`, `KeyboardRight`, `Gamepad`); centralize in constants if you touch them.
 - **Scene management**: scenes are loaded by build index today (`LoadScene(0)`, `GetActiveScene().buildIndex`). Don't change load strategy without an ADR; keep Build Settings valid.
 - **ScriptableObjects**: none exist today. Introduce for data config (tank stats, match settings) only in/after M3 with an ADR.
+- **Third-party services** (Firebase, GPGS, AdMob, IAP): wrap each behind a small interface/service class with **non-blocking initialization**, a defined offline/failure behavior, and a feature flag so gameplay never waits on a network call. No service code in gameplay classes (`TankAI`, `GameManager`). No service work before M5/M6 approval.
 - **Errors/logging**: `Debug.LogError` for config faults, `LogWarning` for recoverable; no log spam in per-frame paths; wrap debug logs in `#if UNITY_EDITOR || DEVELOPMENT_BUILD` if frequent.
-- **Performance**: target budgets are PENDING (M6). Do not micro-optimize before profiling.
+- **Performance**: target budgets are PENDING (decide before M8; ADR-009). Do not micro-optimize before profiling.
 - **Comments**: existing code is heavily commented for learners. New code: comment *why*, not *what*.
 
 ## G. Unity Development Rules
@@ -123,23 +126,22 @@ Follow existing conventions unless there is a concrete reason not to:
 - **Packages**: no install/upgrade/remove without approval. Packages were just upgraded on 2026-11-06 (see `Logs/Packages-Update.log`); do not churn. `com.unity.ai.assistant` is pre-release — decision pending (ADR-007).
 - **Input Actions**: edit `Tank_Actions.inputactions` (JSON) only deliberately; keep action and scheme names stable or update all string users. Persisted "Project-wide Actions" assignment is empty in ProjectSettings (`preloadedAssets: []`) — see KI-006.
 - **URP**: two pipeline asset families exist; don't modify renderer features/quality tiers without a task. PC and Mobile assets differ intentionally.
-- **Android**: package name, keystore, ARM64, IL2CPP, min/target SDK are release settings — change only in M0/M7 with explanation. Never commit keystores or passwords.
-- **Windows**: Mono/IL2CPP choice, resolution/fullscreen defaults are PENDING; don't change silently.
+- **Android**: package name, keystore, ARM64, IL2CPP, min/target SDK are release settings — change only in M0 (dev values) / M7 (final name, package ID) / M8 (release config) with explanation. Never commit keystores, passwords, `google-services.json` secrets beyond what the owner approves, AdMob/Firebase/Play keys or service-account files without owner review. Package ID must be fixed **before** Firebase/GPGS/AdMob/IAP registration (those bind to it).
+- **Windows**: out of first-release scope; don't change Windows settings.
 - **Generated folders**: `Library/`, `Temp/`, `Logs/`, `UserSettings/`, `obj/`, `*.csproj`, `*.slnx` are generated — never hand-edit, never commit.
 
 ## H. Platform Requirements
 
-### Windows PC
-- Input: keyboard (P1 `WASD`+`Space`, P2 arrows+`Enter`, pause `Esc`), gamepad. **Gamepad gap (STATIC)**: the `Gamepad` scheme and bindings exist in `Tank_Actions`, but `TankMovement.Start` only activates `Gamepad` for the mobile virtual device; on desktop it activates `KeyboardLeft`/`KeyboardRight`. Physical-gamepad play therefore appears **not wired** (needs runtime confirmation → KI-010).
-- UI scaling: canvas scaler match set per aspect each frame in `GameUIHandler.Update`; test 16:9, 16:10, 21:9, 4:3.
-- Performance/graphics: PC URP asset; budgets PENDING (M6). Build: Windows x64, development build for testing.
-
-### Android
-- Input: on-screen joystick (`MobileControlCanvas.prefab`, `MobileUIControl`); single human player. **Not wired into any of the 3 scenes (STATIC string search)** — verify in Editor (KI-008).
-- UI: portrait is made readable but the game is landscape; check notches/safe area (no safe-area code exists).
-- Performance: use `Mobile_RPAsset`/`Mobile_Renderer`; budgets PENDING; test low/mid-tier device.
-- Build: IL2CPP, ARM64 required for Play Store; package name placeholder; min SDK 25 currently.
+### Android (the only first-release platform)
+- Input: on-screen joystick (`MobileControlCanvas.prefab`, `MobileUIControl`); single human player vs AI. **Presence in the 3 scenes is UNKNOWN** (scenes are binary; string search is inconclusive) — verify in Editor (KI-008). Android input init has statically suspect null paths (`Keyboard.current`, scheme access) — M1, task AND-01.
+- UI: portrait is made readable but the game is landscape; orientation/tablet support PENDING; no safe-area code exists (M4).
+- Lifecycle: no pause-on-background, no Back-key handling today (M3).
+- Performance: use `Mobile_RPAsset`/`Mobile_Renderer` (which asset Android uses is UNVERIFIED); budgets PENDING; test low/mid-tier device (M8).
+- Build: IL2CPP, ARM64, signed AAB for Play; package name placeholder; min SDK 25 currently (second-hand, UNVERIFIED); Android player settings are in a binary `ProjectSettings.asset` and must be read in the Editor.
 - **Physical-device testing is required**; Editor device simulator is not sufficient.
+
+### Deferred (out of first-release scope; code retained)
+- Windows PC: keyboard (P1 `WASD`+`Space`, P2 arrows+`Enter`, pause `Esc`) works in the Editor by design; gamepad appears unwired (KI-010) — **deferred, not a blocker**.
 
 ## I. Testing and QA Standards
 
@@ -147,11 +149,12 @@ Follow existing conventions unless there is a concrete reason not to:
 |---|---|---|
 | Static inspection | Read code/config, grep, cross-check refs | — |
 | Compilation | Only if Unity batch-mode or an Editor tool is available and *actually run*; otherwise state "not compiled" | Editor compile / `-batchmode -quit` |
-| EditMode tests | Write them (M0/M6); run only if the Unity CLI/MCP is available | Test Runner |
+| EditMode tests | Write them (M2/M8); run only if the Unity CLI/MCP is available | Test Runner |
 | PlayMode tests | Same | Test Runner |
 | Manual gameplay | Provide checklists | A person plays each arena |
-| Windows build | Prepare steps | Editor build, run |
-| Android test | Prepare steps | Real device, ADB logs |
+| Android build / device test (primary) | Prepare steps, read logs | Editor build, real device, ADB logs |
+| Service tests (Firebase, GPGS, AdMob test ads, IAP license-tester purchases) | Prepare steps | Real device + console accounts owned by the owner |
+| Windows build | Out of first-release scope | — |
 | Regression | Maintain `TESTING_CHECKLIST.md` | Re-execute after changes |
 
 Rules: never write PASS without execution evidence (date, build/commit, who/what ran it). "Compiles" requires an actual compile result. A milestone with unexecuted device tests becomes **REVIEW REQUIRED**, not COMPLETED.
@@ -180,7 +183,8 @@ Rules: never write PASS without execution evidence (date, build/commit, who/what
 - Never silently expand MVP scope.
 - Never commit, push, or publish without explicit permission (the one-time repository setup of 2026-11-07 was explicitly approved; see §N). Follow §N for all Git work.
 - Never write secrets (keystores, passwords, tokens) into the repo or docs.
-- Licensing: never assume sample content is freely redistributable commercially; record provenance; unresolved licensing = release blocker (M7, KI-007). Make no legal conclusions.
+- Licensing: never assume sample content is freely redistributable commercially; record provenance; unresolved licensing = release blocker (KI-007). **Licensing investigation starts in M0/M1 (early); M7 is the final clearance gate.** Make no legal conclusions.
+- Services/monetization: do not add SDKs, create console projects, register apps or write integration code outside the owning milestone (M5 Firebase/GPGS, M6 AdMob/IAP) and without approval. Never put real ad unit IDs or product IDs into a test path; use test IDs until release.
 - **Approval required before**: major refactors, asset deletion, folder restructuring, package/Unity changes, project-wide settings, new architectural dependencies, scope expansion, changes with asset-compatibility risk.
 
 ## L. Documentation Maintenance
@@ -206,7 +210,8 @@ Files live in `Documentation/Development/`. After any meaningful task update, as
 
 **Quality gates** — a milestone is COMPLETED only if: all mandatory tasks done; acceptance criteria met; relevant tests executed or explicitly marked unavailable-with-owner-sign-off; no unresolved critical blocker; docs updated; changes reviewable. Tasks needing the Editor or a device → **REVIEW REQUIRED**.
 
-**Active milestone**: see `MILESTONE_STATUS.md` (initially **M0 — Project Stabilization**, NOT STARTED).
+**Milestones**: M0 Stabilization → M1 Android Gameplay Vertical Slice → M2 Reliability & Balancing → M3 Product Foundation & Flow → M4 Android UI/UX → M5 Firebase, GPGS & Player Data → M6 Monetization (AdMob + IAP) → M7 Original Content, Branding & Commercial Identity → M8 Optimization, QA & Release. Details: `MILESTONE_ROADMAP.md`, `Milestones/`. Superseded PC-oriented plan: `Documentation/Development/Archive/` (historical only).
+**Active milestone**: see `MILESTONE_STATUS.md` (**M0 — Project Stabilization, IN PROGRESS**).
 
 ---
 
