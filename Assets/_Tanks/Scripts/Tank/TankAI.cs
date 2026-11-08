@@ -81,7 +81,30 @@ namespace Tanks.Complete
             // The Select function will call the function passed as a parameter on each entry in the list (here TankManager) and make a new list
             // containing what each return. The function we pass here, e => e.m_Instance, return the Transform of the tank the TankManager manage
             // so effectively manager.m_SpawnPoints.Select(e => e.m_Instance) give a list of all the tanks transform.
-            m_AllTanks = manager.m_SpawnPoints.Select(e => e.m_Instance).ToArray();
+            // Only spawn points that actually received a tank are kept: the GameManager has a fixed number of spawn
+            // points (4) but only creates as many tanks as there are players, so unused entries have a null m_Instance.
+            m_AllTanks = manager.m_SpawnPoints.Where(e => e.m_Instance != null).Select(e => e.m_Instance).ToArray();
+        }
+
+        // Called every time the tank is (re)enabled, i.e. at the start of each round (TankManager.Reset and EnableControl).
+        // Drop everything the AI learned in the previous round so it picks a fresh target and path from its new spawn point.
+        private void OnEnable()
+        {
+            m_CurrentTarget = null;
+            m_CurrentPath = null;
+            m_CurrentCorner = 0;
+            m_IsMoving = false;
+            m_CurrentState = State.Seek;
+
+            // Make the first Update pathfind immediately instead of waiting for the timer
+            m_PathfindTimer = m_PathfindTime;
+            m_ShotCooldown = 0.0f;
+
+            m_LastTargetPosition = Vector3.zero;
+            m_TimeSinceLastTargetMove = 0.0f;
+            m_TimeCloseToTarget = 0.0f;
+            m_FleeingLastPosition = Vector3.zero;
+            m_SinceLastFleeingMove = 0.0f;
         }
 
         public void TurnOff()
@@ -133,14 +156,15 @@ namespace Tanks.Complete
                 // Calculate a path to every tank and check the closest
                 for (var i = 0; i < m_AllTanks.Length; i++)
                 {
-                    var tank = m_AllTanks[i].gameObject;
+                    var tank = m_AllTanks[i];
+
+                    // this is an unassigned, destroyed or deactivated tank, this is not a valid target. This must be
+                    // checked before using the entry in any way.
+                    if(tank == null || !tank.activeInHierarchy)
+                        continue;
 
                     //we don't want the tank to try to target itself, so ignore itself
                     if (tank == gameObject)
-                        continue;
-                    
-                    // this is a destroyed or deactivated tank, this is not a valid target
-                    if(tank == null || !tank.activeInHierarchy)
                         continue;
 
                     paths[i] = new NavMeshPath();

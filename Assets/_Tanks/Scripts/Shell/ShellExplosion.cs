@@ -38,7 +38,9 @@ namespace Tanks.Complete
                     continue;
 
                 // Add an explosion force.
-                targetRigidbody.GetComponent<TankMovement>().AddExplosionForce(m_ExplosionForce, transform.position, m_ExplosionRadius);
+                TankMovement targetMovement = targetRigidbody.GetComponent<TankMovement>();
+                if (targetMovement != null)
+                    targetMovement.AddExplosionForce(m_ExplosionForce, transform.position, m_ExplosionRadius);
 
                 // Find the TankHealth script associated with the rigidbody.
                 TankHealth targetHealth = targetRigidbody.GetComponent<TankHealth> ();

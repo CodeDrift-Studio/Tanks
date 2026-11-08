@@ -57,6 +57,12 @@ namespace Tanks.Complete
             m_HasSpecialShell = false;
             m_SpecialShellMultiplier = 1.0f;
 
+            // Clear any transient state left over from the previous round (e.g. the tank was destroyed while charging).
+            // m_Fired = true means "no shot pending": a new shot only starts on a fresh press (human) or StartCharging (AI).
+            m_IsCharging = false;
+            m_Fired = true;
+            m_ShotCooldownTimer = 0f;
+
             m_AimSlider.minValue = m_MinLaunchForce;
             m_AimSlider.maxValue = m_MaxLaunchForce;
         }
@@ -129,6 +135,9 @@ namespace Tanks.Complete
                 // ... use the max force and launch the shell.
                 m_CurrentLaunchForce = m_MaxLaunchForce;
                 Fire ();
+                // The charge is over: without this the AI stays flagged as "charging" with a minimum force, never
+                // starts a new charge, and would later release an unintended minimum-force shell via StopCharging.
+                m_IsCharging = false;
             }
             // Otherwise, if the fire button is being held and the shell hasn't been launched yet...
             else if (m_IsCharging && !m_Fired)

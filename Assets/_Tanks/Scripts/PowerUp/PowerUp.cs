@@ -52,7 +52,8 @@ namespace Tanks.Complete
                 PowerUpDetector m_PowerUpDetector = other.gameObject.GetComponent<PowerUpDetector>();
 
                 // Checks that the tank has not picked up other power up
-                if (!m_PowerUpDetector.m_HasActivePowerUp)
+                // A Players-layer collider without a PowerUpDetector can't use the power up: ignore it
+                if (m_PowerUpDetector != null && !m_PowerUpDetector.m_HasActivePowerUp)
                 {
                     // The power up reduces is a shield
                     if (m_PowerUpType == PowerUpType.DamageReduction)

@@ -43,6 +43,11 @@ namespace Tanks.Complete
         /// <param name="duration"> Time of displaying the power up HUD. This should coincide with the duration time of the power up.</param>
         public void SetActivePowerUp(PowerUp.PowerUpType powerUpType, float duration)
         {
+            // Only one icon can be displayed at a time: hide the previous one so it can't stay stuck on screen
+            // (e.g. picking up a power up while the short Healing icon is still displayed)
+            if (m_ActivePowerUpHUD != null)
+                m_ActivePowerUpHUD.SetActive(false);
+
             switch (powerUpType)
             {
                 case PowerUp.PowerUpType.DamageReduction:
@@ -79,10 +84,32 @@ namespace Tanks.Complete
         /// </summary>
         public void DisableActiveHUD()
         {
-            m_ActivePowerUpHUD.SetActive(false);
+            if (m_ActivePowerUpHUD != null)
+                m_ActivePowerUpHUD.SetActive(false);
             m_ActivePowerUpHUD = null;
             m_HasActivePowerUp = false;
             m_DisplayTime = 0f;
+        }
+
+        /// <summary>
+        /// Hides every power up icon and clears the HUD state. Used on death and round reset. Safe with missing references.
+        /// </summary>
+        public void ResetHUD()
+        {
+            DisableActiveHUD();
+
+            if (m_DamageReductionHUD != null) m_DamageReductionHUD.SetActive(false);
+            if (m_EnhancedShootingHUD != null) m_EnhancedShootingHUD.SetActive(false);
+            if (m_EnhancedSpeedHUD != null) m_EnhancedSpeedHUD.SetActive(false);
+            if (m_EnhancedShellHUD != null) m_EnhancedShellHUD.SetActive(false);
+            if (m_HealingHUD != null) m_HealingHUD.SetActive(false);
+            if (m_TemporaryInvencibilityHUD != null) m_TemporaryInvencibilityHUD.SetActive(false);
+        }
+
+        private void OnDisable()
+        {
+            // The HUD lives on the tank: make sure no icon survives a deactivation of the tank
+            ResetHUD();
         }
     }
 }
