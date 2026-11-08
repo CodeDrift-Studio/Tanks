@@ -57,6 +57,7 @@ Statuses: **CONFIRMED** (owner) · **PENDING** (owner decision needed) · **ASSU
 | DR-P19 | Pre-release/unused package cleanup (ADR-007), Git LFS (M0) | Size, privacy | M0 / before M8 | KI-009 |
 | DR-P20 | Localization (languages at launch) | UI text approach | Before M4 | — |
 | DR-P21 | Commit grouping and branch/commit plan for the pending work (scripts incl. the `TankAI.cs` KI-P08 + GP-03 split, tank prefabs, reserialized assets, documentation) | Reviewability; `GIT_WORKFLOW.md` | **DEFERRED by owner 2026-11-08** (conflict 11). No staging, commits, push or merge until the owner decides | CLAUDE.md §N |
+| DR-P22 | Enable the Git LFS rules for binary assets (textures, models, audio, plugins)? Needs an approved migration plan | The owner-supplied `.gitattributes` routed binaries to LFS, but ~140 such files are already plain blobs in history; Claude disabled the LFS filter lines (kept as a commented block) and marked those types `binary` instead, to avoid phantom modifications and an unapproved LFS migration. Related: DR-P19 | Before large binary content grows (before M7 art work / any large asset import) | CLAUDE.md §N, `.gitattributes` |
 
 ## C. Assumed proposals (NOT decisions)
 - Landscape-only phone-first layout (DR-P9).
@@ -68,3 +69,4 @@ Statuses: **CONFIRMED** (owner) · **PENDING** (owner decision needed) · **ASSU
 - 2026-11-08 (later): owner confirmed first-release arena scope = **Desert only** (DR-C14). DR-C11 superseded, DR-P12 resolved. Jungle and Moon recorded as deferred content for a future update, not release blockers.
 - 2026-11-08 (baseline freeze): DR-C15 (initial tank balance accepted as baseline), DR-C16 (temporary gameplay freeze), DR-C17 (next focus Firebase + GPGS) recorded from owner instruction. No pending decision was resolved or invented.
 - 2026-11-08 (conflict resolution): owner decisions recorded as DR-C18…DR-C22 and DR-P21 (deferred). DR-C16/DR-C17 wording updated to point at them. No other decision changed.
+- 2026-11-08 (git config): owner-supplied `.gitignore` / `.gitattributes` applied with adjustments by Claude (restored dropped ignore rules incl. `UserSettings/`, `*.slnx`, `.vscode/`, `.utmp/`, OS files; `.asset` and `.scenetemplate` kept as diffable text; LFS lines disabled, see DR-P22). Adjustments await owner review.
