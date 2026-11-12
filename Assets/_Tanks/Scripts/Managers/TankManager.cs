@@ -24,6 +24,8 @@ namespace Tanks.Complete
         [HideInInspector] public GameObject m_Instance;         // A reference to the instance of the tank when it is created.
         [HideInInspector] public int m_Wins;                    // The number of wins this player has so far.
         [HideInInspector] public bool m_ComputerControlled;     // Is that tank computer controlled
+        [HideInInspector] public string m_DisplayName;          // Presentation-only name ("YOU", "AI 1"...). Never used for gameplay identity.
+        [HideInInspector] public bool m_IsLocalPlayer;          // Presentation-only: true for the tank shown as "YOU"
         
         public int ControlIndex { get; set; } = 1;              //this defines the index of the control 1 = left keyboard or pad, 2 = right keyboard, -1 = no control
 
@@ -32,6 +34,8 @@ namespace Tanks.Complete
         private TankShooting m_Shooting;                        // Reference to tank's shooting script, used to disable and enable control.
         private GameObject m_CanvasGameObject;                  // Used to disable the world space UI during the Starting and Ending phases of each round.
         
+        private TankNameplate m_Nameplate;                      // World-space "YOU" label (only created for the local player tank)
+
         private TankAI m_AI;                                    // The Tank AI script that let a tank be a bot controlled by the computer
         private InputUser m_InputUser;                          // The Input user link to that tank. Input user identify a single player in the Input system
         
@@ -64,8 +68,10 @@ namespace Tanks.Complete
                 m_AI.Setup(manager);
             }
             
-            // Create a string using the correct color that says 'PLAYER 1' etc based on the tank's color and the player's number.
-            m_ColoredPlayerText = "<color=#" + ColorUtility.ToHtmlStringRGB(m_PlayerColor) + ">PLAYER " + m_PlayerNumber + "</color>";
+            // Create a string using the tank's color and its display name ("YOU", "AI 1"...). GameManager assigns
+            // m_DisplayName; fall back to the old 'PLAYER n' text if it was not set.
+            string displayName = string.IsNullOrEmpty(m_DisplayName) ? "PLAYER " + m_PlayerNumber : m_DisplayName;
+            m_ColoredPlayerText = "<color=#" + ColorUtility.ToHtmlStringRGB(m_PlayerColor) + ">" + displayName + "</color>";
 
             // Get all of the renderers of the tank.
             MeshRenderer[] renderers = m_Instance.GetComponentsInChildren<MeshRenderer> ();
@@ -84,6 +90,19 @@ namespace Tanks.Complete
                     }
                 }
             }
+        }
+
+
+        // Creates the "YOU" nameplate above this tank. Replaces any previous one so it can never be duplicated.
+        public void CreateNameplate(TMPro.TMP_FontAsset font)
+        {
+            if (m_Nameplate != null)
+                UnityEngine.Object.Destroy(m_Nameplate.gameObject);
+
+            if (m_Instance == null || !m_IsLocalPlayer)
+                return;
+
+            m_Nameplate = TankNameplate.Create(m_Instance.transform, m_DisplayName, font, m_CanvasGameObject.layer);
         }
 
 

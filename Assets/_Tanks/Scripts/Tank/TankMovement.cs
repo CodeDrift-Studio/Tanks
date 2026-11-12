@@ -43,6 +43,16 @@ namespace Tanks.Complete
         private InputAction m_TurnAction;             // The InputAction used to shot, retrieved from TankInputUser
 
         private Vector3 m_RequestedDirection;       // In Direct Control mode, store the direction the user *wants* to go toward
+
+        // Mobile on-screen rotation buttons. The joystick itself is the ORIGINAL direct-control scheme (the "Gamepad"
+        // control scheme: stick = desired world direction relative to the camera, the tank auto-steers toward it).
+        // The two rotation buttons are read from the virtual gamepad's shoulder buttons and add an independent pivot.
+        private Gamepad m_VirtualGamepad;               // The on-screen virtual gamepad device (null when not using on-screen controls)
+        private float m_PivotInput;                     // +1 clockwise, -1 counter-clockwise, 0 none/both (cancelled)
+
+        // Direct control (stick = desired world direction): used by the Gamepad scheme (real or on-screen) and m_IsDirectControl.
+        private bool UseDirectControl =>
+            m_InputUser.InputUser.controlScheme.Value.name == "Gamepad" || m_IsDirectControl;
         
         private void Awake ()
         {
@@ -62,6 +72,7 @@ namespace Tanks.Complete
             // Also reset the input values and explosion force.
             m_MovementInputValue = 0f;
             m_TurnInputValue = 0f;
+            m_PivotInput = 0f;
             m_ExplosionForceValue = Vector3.zero;
             // We grab all the Particle systems child of that Tank to be able to Stop/Play them on Deactivate/Activate
             // It is needed because we move the Tank when spawning it, and if the Particle System is playing while we do that
@@ -120,6 +131,7 @@ namespace Tanks.Complete
             {
                 m_InputUser.SetNewInputUser(InputUser.PerformPairingWithDevice(mobileControl.Device));
                 m_InputUser.ActivateScheme("Gamepad");
+                m_VirtualGamepad = mobileControl.Device as Gamepad;
             }
             else
             {
@@ -155,6 +167,7 @@ namespace Tanks.Complete
             {
                 m_MovementInputValue = m_MoveAction.ReadValue<float>();
                 m_TurnInputValue = m_TurnAction.ReadValue<float>();
+                m_PivotInput = ReadPivotInput();
             }
             
             if(m_MovementAudio)
@@ -164,10 +177,22 @@ namespace Tanks.Complete
         }
 
 
+        // +1 clockwise, -1 counter-clockwise, 0 when none or both buttons are held (deterministic cancel).
+        private float ReadPivotInput()
+        {
+            if (m_VirtualGamepad == null || !m_VirtualGamepad.added)
+                return 0f;
+
+            float pivot = 0f;
+            if (m_VirtualGamepad.leftShoulder.isPressed) pivot += 1f;   // "rotate clockwise" button
+            if (m_VirtualGamepad.rightShoulder.isPressed) pivot -= 1f;  // "rotate counterclockwise" button
+            return pivot;
+        }
+
         private void EngineAudio ()
         {
             // If there is no input (the tank is stationary)...
-            if (Mathf.Abs (m_MovementInputValue) < 0.1f && Mathf.Abs (m_TurnInputValue) < 0.1f)
+            if (Mathf.Abs (m_MovementInputValue) < 0.1f && Mathf.Abs (m_TurnInputValue) < 0.1f && m_PivotInput == 0f)
             {
                 // ... and if the audio source is currently playing the driving clip...
                 if (m_MovementAudio.clip == m_EngineDriving)
@@ -197,7 +222,7 @@ namespace Tanks.Complete
             // If this is using a gamepad or have direct control enabled, this used a different movement method : instead of
             // "up" behind moving forward for the tank, it instead takes the gamepad move direction as the desired forward for the tank
             // and will compute the speed and rotation needed to move the tank toward that direction.
-            if (m_InputUser.InputUser.controlScheme.Value.name == "Gamepad" ||  m_IsDirectControl)
+            if (UseDirectControl)
             {
                 var camForward = Camera.main.transform.forward;
                 camForward.y = 0;
@@ -229,7 +254,7 @@ namespace Tanks.Complete
             float speedInput = 0.0f;
             
             // In direct control mode, the speed will depend on how far from the desired direction we are
-            if (m_InputUser.InputUser.controlScheme.Value.name == "Gamepad" || m_IsDirectControl)
+            if (UseDirectControl)
             {
                 speedInput = m_RequestedDirection.magnitude;
                 //if we are direct control, the speed of the move is based angle between current direction and the wanted
@@ -255,12 +280,19 @@ namespace Tanks.Complete
         {
             Quaternion turnRotation;
             // If in direct control...
-            if (m_InputUser.InputUser.controlScheme.Value.name == "Gamepad" || m_IsDirectControl)
+            if (UseDirectControl)
             {
                 // Compute the rotation needed to reach the desired direction
                 float angleTowardTarget = Vector3.SignedAngle(m_RequestedDirection, transform.forward, transform.up);
                 var rotatingAngle = Mathf.Sign(angleTowardTarget) * Mathf.Min(Mathf.Abs(angleTowardTarget), m_TurnSpeed * Time.deltaTime);
-                turnRotation = Quaternion.AngleAxis(-rotatingAngle, Vector3.up);
+                float yaw = -rotatingAngle;
+
+                // The rotation buttons add an independent pivot on top of the stick's auto-steer; the sum is clamped
+                // so the tank never turns faster than m_TurnSpeed. With the stick centred there is no direct-control
+                // rotation, so the buttons pivot the tank on their own.
+                float maxYaw = m_TurnSpeed * Time.deltaTime;
+                yaw = Mathf.Clamp(yaw + m_PivotInput * maxYaw, -maxYaw, maxYaw);
+                turnRotation = Quaternion.Euler(0f, yaw, 0f);
             }
             else
             {

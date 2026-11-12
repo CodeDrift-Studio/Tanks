@@ -71,6 +71,10 @@ namespace Tanks.Complete
                 // delta time and nothing will move anymore.
                 Time.timeScale = state ? 0.0f : 1.0f;
 
+                // Hide the gameplay controls while paused (and release any held input); restore them on resume.
+                if (MobileUIControl.Instance != null)
+                    MobileUIControl.Instance.SetPausedHidden(state);
+
                 m_ControlMenuRoot.gameObject.SetActive(false);
                 m_PauseMenuButtonsRoot.gameObject.SetActive(true);
             }

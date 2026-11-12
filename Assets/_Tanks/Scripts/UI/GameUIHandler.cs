@@ -7,6 +7,8 @@ using UnityEngine.InputSystem.OnScreen;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 
+using Tanks.Complete.FirebaseSystem;
+
 namespace Tanks.Complete
 {
     // This handle both the start menu (selecting which tank each player use) and the pause menu if present
@@ -196,6 +198,9 @@ namespace Tanks.Complete
             {
                 if (!slot.IsOpen)
                 {
+                    if (!slot.IsComputer && slot.TankPrefab != null)
+                        FirebaseManager.ReportTankSelected(slot.TankPrefab.name);
+
                     playerData.Add(new GameManager.PlayerData()
                     {
                         TankColor = slot.m_SlotColor,

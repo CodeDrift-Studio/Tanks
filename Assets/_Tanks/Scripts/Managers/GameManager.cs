@@ -3,6 +3,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
+using Tanks.Complete.FirebaseSystem;
 
 namespace Tanks.Complete
 {
@@ -47,7 +48,8 @@ namespace Tanks.Complete
         private TankManager m_GameWinner;           // Reference to the winner of the game.  Used to make an announcement of who won.
 
         private PlayerData[] m_TankData;            // Data passed from the menu about each selected tank (at least 2, max 4)
-        private int m_PlayerCount = 0;              // The number of players (2 to 4), decided from the number of PlayerData passed by the menu
+        private float m_MatchStartTime;             // Time.time when the match started (scaled time, so pauses are excluded)
+        private int m_PlayerCount = 0;             // The number of players (2 to 4), decided from the number of PlayerData passed by the menu
         private TextMeshProUGUI m_TitleText;        // The text used to display game message. Automatically found as part of the Menu prefab
 
         private void Start()
@@ -91,6 +93,7 @@ namespace Tanks.Complete
         void ChangeGameState(GameState newState)
         {
             m_CurrentState = newState;
+            FirebaseManager.SetGameState(newState.ToString(), m_RoundNumber);
 
             switch (m_CurrentState)
             {
@@ -105,6 +108,14 @@ namespace Tanks.Complete
         {
             m_TankData = playerData;
             m_PlayerCount = m_TankData.Length;
+
+            int bots = 0;
+            foreach (var data in m_TankData)
+                if (data.IsComputer) bots++;
+            m_MatchStartTime = Time.time;
+            FirebaseManager.ReportMatchStarted(m_PlayerCount, m_PlayerCount - bots, bots, m_NumRoundsToWin,
+                SceneManager.GetActiveScene().name);
+
             ChangeGameState(GameState.Game);
         }
 
@@ -132,6 +143,8 @@ namespace Tanks.Complete
                 m_SpawnPoints[i].m_ComputerControlled = playerData.IsComputer;
             }
 
+            AssignDisplayNames();
+
             //we delayed setup after all tanks are created as they expect to have access to all other tanks in the manager
             foreach (var tank in m_SpawnPoints)
             {
@@ -139,6 +152,39 @@ namespace Tanks.Complete
                     continue;
                 
                 tank.Setup(this);
+            }
+
+            // "YOU" nameplate above the human tank only (after Setup, which caches the tank canvas layer)
+            foreach (var tank in m_SpawnPoints)
+            {
+                if (tank.m_Instance != null && tank.m_IsLocalPlayer)
+                    tank.CreateNameplate(m_TitleText != null ? m_TitleText.font : null);
+            }
+        }
+
+
+        // Presentation-only naming. Gameplay identity (m_PlayerNumber, spawn index, ControlIndex, wins) is untouched.
+        // The local player is the human tank on ControlIndex 1 (the one using the on-screen joystick), otherwise the
+        // first human tank, wherever it is in the spawn order. AIs are numbered by spawn order, so the numbers are
+        // fixed for the whole match. Any additional human keeps the old "PLAYER n" name.
+        private void AssignDisplayNames()
+        {
+            int localIndex = -1;
+            for (int i = 0; i < m_PlayerCount; i++)
+            {
+                if (m_SpawnPoints[i].m_ComputerControlled) continue;
+                if (localIndex == -1) localIndex = i;
+                if (m_SpawnPoints[i].ControlIndex == 1) { localIndex = i; break; }
+            }
+
+            int aiNumber = 0;
+            for (int i = 0; i < m_PlayerCount; i++)
+            {
+                var tank = m_SpawnPoints[i];
+                tank.m_IsLocalPlayer = i == localIndex;
+                if (tank.m_IsLocalPlayer) tank.m_DisplayName = "YOU";
+                else if (tank.m_ComputerControlled) tank.m_DisplayName = "AI " + (++aiNumber);
+                else tank.m_DisplayName = "PLAYER " + tank.m_PlayerNumber;
             }
         }
 
@@ -175,6 +221,8 @@ namespace Tanks.Complete
             // This code is not run until 'RoundEnding' has finished.  At which point, check if a game winner has been found.
             if (m_GameWinner != null)
             {
+                ReportMatchCompleted();
+
                 // If there is a game winner, restart the level.
                 SceneManager.LoadScene (0);
             }
@@ -240,6 +288,13 @@ namespace Tanks.Complete
             // Now the winner's score has been incremented, see if someone has one the game.
             m_GameWinner = GetGameWinner ();
 
+            FirebaseManager.ReportRoundCompleted(m_RoundNumber, ResultFor(m_RoundWinner));
+
+            // The match is over: hide the on-screen mobile controls (no-op on non-mobile / when absent).
+            // They are shown again by GameUIHandler.StartGame() when the next match begins.
+            if (m_GameWinner != null && MobileUIControl.Instance != null)
+                MobileUIControl.Instance.Hide();
+
             // Get a message based on the scores and whether or not there is a game winner and display it.
             string message = EndMessage ();
             m_TitleText.text = message;
@@ -248,6 +303,23 @@ namespace Tanks.Complete
             yield return m_EndWait;
         }
 
+
+        // Analytics result from the human side: a bot winning counts as a loss, no winner is a draw.
+        private static string ResultFor(TankManager winner)
+        {
+            if (winner == null) return FirebaseEventRegistry.ResultDraw;
+            return winner.m_ComputerControlled ? FirebaseEventRegistry.ResultLoss : FirebaseEventRegistry.ResultWin;
+        }
+
+        private void ReportMatchCompleted()
+        {
+            int humanWins = 0;
+            for (int i = 0; i < m_PlayerCount; i++)
+                if (!m_SpawnPoints[i].m_ComputerControlled)
+                    humanWins += m_SpawnPoints[i].m_Wins;
+
+            FirebaseManager.ReportMatchCompleted(ResultFor(m_GameWinner), m_RoundNumber, humanWins, Time.time - m_MatchStartTime);
+        }
 
         // This is used to check if there is one or fewer tanks remaining and thus the round should end.
         private bool OneTankLeft()
@@ -309,7 +381,7 @@ namespace Tanks.Complete
 
             // If there is a winner then change the message to reflect that.
             if (m_RoundWinner != null)
-                message = m_RoundWinner.m_ColoredPlayerText + " WINS THE ROUND!";
+                message = m_RoundWinner.m_ColoredPlayerText + WinVerb(m_RoundWinner) + " THE ROUND!";
 
             // Add some line breaks after the initial message.
             message += "\n\n\n\n";
@@ -317,14 +389,22 @@ namespace Tanks.Complete
             // Go through all the tanks and add each of their scores to the message.
             for (int i = 0; i < m_PlayerCount; i++)
             {
-                message += m_SpawnPoints[i].m_ColoredPlayerText + ": " + m_SpawnPoints[i].m_Wins + " WINS\n";
+                int wins = m_SpawnPoints[i].m_Wins;
+                message += m_SpawnPoints[i].m_ColoredPlayerText + ": " + wins + (wins == 1 ? " WIN\n" : " WINS\n");
             }
 
             // If there is a game winner, change the entire message to reflect that.
             if (m_GameWinner != null)
-                message = m_GameWinner.m_ColoredPlayerText + " WINS THE GAME!";
+                message = m_GameWinner.m_ColoredPlayerText + WinVerb(m_GameWinner) + " THE GAME!";
 
             return message;
+        }
+
+
+        // "YOU WIN" / "AI 2 WINS" - grammatical agreement for the winner message.
+        private static string WinVerb(TankManager winner)
+        {
+            return winner.m_IsLocalPlayer ? " WIN" : " WINS";
         }
 
 

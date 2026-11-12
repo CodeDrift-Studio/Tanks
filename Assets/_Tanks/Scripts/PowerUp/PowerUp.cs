@@ -1,4 +1,5 @@
 using UnityEngine;
+using Tanks.Complete.FirebaseSystem;
 
 namespace Tanks.Complete
 {
@@ -73,6 +74,11 @@ namespace Tanks.Complete
                     // The power up increases the damage of the shell
                     else if (m_PowerUpType == PowerUpType.DamageMultiplier)
                         m_PowerUpDetector.PowerUpSpecialShell(m_DamageMultiplier);
+
+                    // Only human pickups are reported (bots would dominate and skew the data)
+                    var mover = other.GetComponent<TankMovement>();
+                    if (mover != null && !mover.m_IsComputerControlled)
+                        FirebaseManager.ReportPowerUpCollected(m_PowerUpType.ToString());
 
                     // Tells the spawner that the power up has been collected
                     if (m_Spawner != null)
